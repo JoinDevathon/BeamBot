@@ -104,7 +104,7 @@ function updateNames() {
         });
         names = names.filter(({name}) => name.indexOf('.') === -1 && name.indexOf(':') === -1 && name.indexOf('/') === -1);
         const beamToDevId = {};
-        names.forEach(({name, id}) => beamToDevId[name] = id);
+        names.forEach(({name, id}) => beamToDevId[name.toLowerCase()] = id);
 
         const allArrays = [];
         while (names.length > 0) {
@@ -132,13 +132,13 @@ function updateNames() {
                 for (let prop in mapped) {
                     if (mapped.hasOwnProperty(prop)) {
                         const {channel, username, id} = mapped[prop];
-                        if (!beamToDevId[username]) {
+                        if (!beamToDevId[username.toLowerCase()]) {
                             console.warn('Could not find dev id for', username, beamToDevId);
                             continue;
                         }
                         if (channelsIn.indexOf(channel.id) < 0) {
                             channelsIn.push(channel.id);
-                            joinChannel(channel.id, id, beamToDevId[username]);
+                            joinChannel(channel.id, id, beamToDevId[username.toLowerCase()]);
                         }
                     }
                 }
