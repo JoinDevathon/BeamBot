@@ -9,6 +9,60 @@ const connection = mysql.createConnection({
     password: 'root'
 });
 
+const http = require('http');
+const querystring = require('querystring');
+
+http.createServer((req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', 'http://restful.link');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    const buffers = [];
+
+    req.on('data', data => {
+        buffers.push(data);
+    });
+    req.on('end', () => {
+        const buffer = Buffer.concat(buffers);
+        if (buffer.length === 0) {
+            return res.end('Bad length');
+        }
+        const parsed = querystring.unescape(buffer.toString('utf8'));
+        let content;
+        if (parsed.charAt(0) === '{') {
+            content = JSON.parse(parsed);
+        } else {
+            content = querystring.parse(parsed);
+        }
+
+        if (!content.commits) {
+            console.log('bad', content);
+            return res.end('Not commits');
+        }
+
+        const messages = content.commits.map(commit => commit.message + ` (${commit.url})`);
+        const message = `${content.pusher.name} pushed commits: ${messages.join(', ')}`;
+
+        connection.query('SELECT `id` FROM `users` WHERE `username` = ?', [content.pusher.name], (err, rows) => {
+            if (err) {
+                return console.error(err);
+            }
+            if (rows.length > 0) {
+                const {id} = rows[0];
+                if (sockets[id]) {
+                    sockets[id].call('msg', [message]);
+                }
+            }
+        });
+        console.log(message);
+
+        res.end(JSON.stringify({
+            hello: 'world'
+        }));
+    });
+    req.on('error', err => console.warn('Got error', err));
+}).listen(4000);
+
 connection.connect(err => {
     if (err) {
         return console.error(err);
@@ -88,31 +142,56 @@ function updateNames() {
     });
 }
 
-const sockets = {}; // key: beam id, value: BeamSocket
+const sockets = {}; // key: dev id, value: BeamSocket
 
-function handleMessage(devathonId, data) {
-    console.log('message', data);
+function handleMessage(devathonId, data, socket) {
+    const {message} = data.message;
+    if (message && message.length > 0) {
+        const first = message[0];
+        if (first.type === 'text' && first.text.charAt(0) === '!') {
+            const split = first.text.slice(1).trim().split(" ");
+            const command = split[0].toLowerCase();
+            const args = split.slice(1);
+
+            // todo maybe put this code somewhere else?
+            switch (command) {
+                case 'repo':
+                    connection.query('SELECT `username` FROM `users` WHERE `id` = ?', [devathonId], (err, results) => {
+                        if (err) {
+                            console.error(err);
+                            return socket.call('msg', ['An error occurred looking up the repo!']);
+                        }
+                        if (results.length === 0) {
+                            return socket.call('msg', ['Could not find user with id, internal error.']);
+                        }
+                        const url = `https://github.com/JoinDevathon/${results[0].username}`;
+                        return socket.call('msg', [`You can find the repository at ${url}`]);
+                    });
+                    break;
+            }
+        }
+    }
 }
 
 function joinChannel(id, userId, devId) {
     client.chat.join(id)
         .then(res => {
-            console.log(res.body);
             const socket = new BeamSocket(res.body.endpoints).boot();
 
             socket.on('ChatMessage', data => {
-                handleMessage(devId, data);
+                handleMessage(devId, data, socket);
             });
 
             socket.on('error', (error) => console.error(error));
+            sockets[devId] = socket;
 
-            console.log('connecting..');
-            return socket.auth(id, userId, res.body.authkey);
+            return socket.auth(id, userInfo.id, res.body.authkey);
         })
         .then(() => {
             console.log('logged in for', devId);
         })
         .catch(err => {
+            delete sockets[devId];
             console.error('error', err);
         });
 }
