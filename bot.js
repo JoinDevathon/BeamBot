@@ -102,6 +102,7 @@ function updateNames() {
                 id: row.id
             };
         });
+        names = names.filter(({name}) => name.indexOf('.') === -1 && name.indexOf(':') === -1 && name.indexOf('/') === -1);
         const beamToDevId = {};
         names.forEach(({name, id}) => beamToDevId[name] = id);
 
