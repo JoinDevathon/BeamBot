@@ -131,6 +131,10 @@ function updateNames() {
                 for (let prop in mapped) {
                     if (mapped.hasOwnProperty(prop)) {
                         const {channel, username, id} = mapped[prop];
+                        if (!beamToDevId[username]) {
+                            console.warn('Could not find dev id for', username, beamToDevId);
+                            continue;
+                        }
                         if (channelsIn.indexOf(channel.id) < 0) {
                             channelsIn.push(channel.id);
                             joinChannel(channel.id, id, beamToDevId[username]);
