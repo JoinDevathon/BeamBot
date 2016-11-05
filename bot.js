@@ -173,6 +173,40 @@ function handleMessage(devathonId, data, socket) {
                         return socket.call('msg', [`You can find the repository at ${url}`]);
                     });
                     break;
+                case 'time':
+                    var START = 1478350800000;
+                    var END = 1478440800000;
+
+                    var SECOND = 1000;
+                    var MINUTE = SECOND * 60;
+                    var HOUR = MINUTE * 60;
+                    var DAY = HOUR * 24;
+
+                    var now = new Date().getTime();
+                    var msDiff;
+                    if (now > END) {
+                        socket.call('msg', [`The contest has ended!`]);
+                        clearInterval(interval);
+                        return;
+                    } else if (now > START) {
+                        msDiff = END - now;
+                    } else {
+                        msDiff = START - now;
+                    }
+
+                    var days = Math.floor(msDiff / DAY);
+                    msDiff -= DAY * days;
+
+                    var hours = Math.floor(msDiff / HOUR);
+                    msDiff -= HOUR * hours;
+
+                    var minutes = Math.floor(msDiff / MINUTE);
+                    msDiff -= MINUTE * minutes;
+
+                    var seconds = Math.floor(msDiff / SECOND);
+                    socket.call('msg', [`${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`]);
+
+                    break;
             }
         }
     }
