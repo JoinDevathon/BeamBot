@@ -169,7 +169,7 @@ function handleMessage(devathonId, data, socket) {
                         if (results.length === 0) {
                             return socket.call('msg', ['Could not find user with id, internal error.']);
                         }
-                        const url = `https://github.com/JoinDevathon/${results[0].username}`;
+                        const url = `https://github.com/JoinDevathon/${results[0].username}-2016`;
                         return socket.call('msg', [`You can find the repository at ${url}`]);
                     });
                     break;
